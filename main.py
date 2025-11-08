@@ -13,13 +13,13 @@ def braille_convert(IMAGE_PATH, BRAILLE_CHARS):
             width, height = img.size
             aspect_ratio = 0.5
             output_width = width * 2
-            output_height = (output_width * aspect_ratio) * 4
-            img_prep = img.convert("L").resize(output_width, output_height)
+            output_height = int((output_width * aspect_ratio) * 4)
+            img_prep = img.convert("L").resize((output_width, output_height))
 
             output = []
 
     except FileNotFoundError:
-        print(f"File was not found")
+        print("File was not found")
     except Exception as e:
         print(f"An error was accured: {e}")
 
@@ -30,21 +30,25 @@ def ascii_convert(IMAGE_PATH, ASCII_CHARS):
             width, height = img.size
             aspect_ratio = 0.5
             output_width = 100
-            output_height = output_width * aspect_ratio
-            img_prep = img.convert("L").resize(output_width, output_height)
+            output_height = int(output_width * aspect_ratio)
+            img_prep = img.convert("L").resize((output_width, output_height))
 
             output = []
 
             for y in range(output_height):
                 for x in range(output_width):
-                    map_index = img.getpixel(x, y) * (len(ASCII_CHARS) - 1) // 255
+                    pixel_value = img_prep.getpixel((x, y))
+                    map_index = pixel_value * (len(ASCII_CHARS) - 1) // 255
                     output.append(ASCII_CHARS[map_index])
 
                 output.append("\n")
 
     except FileNotFoundError:
-        print(f"File was not found")
+        print("File was not found")
     except Exception as e:
         print(f"An error was accured: {e}")
 
     return "".join(output)
+
+
+print(ascii_convert(IMAGE_PATH, ASCII_CHARS))
