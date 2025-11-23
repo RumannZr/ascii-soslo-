@@ -2,7 +2,6 @@ import numpy as np
 
 DITHERING_TYPES = [
     "None",
-    "ASCII Art",
     "Bayer level 0",
     "Bayer level 1",
     "Bayer level 2",

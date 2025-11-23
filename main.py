@@ -92,6 +92,15 @@ class ImageProcessorApp(QMainWindow):
             # Display the final image
             self.display_output(image_to_display=self.processed_image)
 
+        elif render_type == "Grayscale":
+            # For Grayscale, just display the resized image
+            self.display_output(image_to_display=self.processed_image)
+
+        elif render_type == "Black/White":
+            # For Black/White, convert the image to 1-bit format
+            bw_image = self.processed_image.convert("1")
+            self.display_output(image_to_display=bw_image)
+
     def copy_text(self):
         """Copies the content of the text output to the clipboard."""
         clipboard = QApplication.clipboard()

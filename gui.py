@@ -69,7 +69,9 @@ class Ui_MainWindow(object):
         self.render_type_label = QLabel("Render Type:")
         self.sidebar_layout.addWidget(self.render_type_label)
         self.render_type_combo = QComboBox()
-        self.render_type_combo.addItems(["Braille", "ASCII"])  # Updated items
+        self.render_type_combo.addItems(
+            ["Braille", "ASCII", "Grayscale", "Black/White"]
+        )  # Updated items
         self.sidebar_layout.addWidget(self.render_type_combo)
 
         # --- Invert Colors Checkbox ---
