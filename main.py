@@ -1,15 +1,12 @@
-# main.py
-
 import sys
 from PyQt5.QtWidgets import QApplication, QMainWindow, QFileDialog
 from PyQt5.QtGui import QPixmap, QImage
 from PIL import Image
 
-# Import the UI class from the gui.py file
 from gui import Ui_MainWindow
 
 from dither import *
-from ascii_converter import ascii_convert
+from ascii_converter import ascii_convert  # Re-added import
 
 
 class ImageProcessorApp(QMainWindow):
@@ -20,15 +17,18 @@ class ImageProcessorApp(QMainWindow):
         self.ui.setupUi(self)
 
         self.original_image = None
-        self.resized_image = None
         self.processed_image = None
         self.ascii_art_output = None
 
+        # --- Connections ---
         self.ui.open_button.clicked.connect(self.open_image)
-        self.ui.width_slider.valueChanged.connect(self.resize_image)
-        self.ui.dithering_combo.currentTextChanged.connect(self.dither_image)
+        self.ui.render_button.clicked.connect(self.render_image)
+        self.ui.copy_button.clicked.connect(self.copy_text)
+        self.ui.save_button.clicked.connect(self.save_text)
 
-        self.dither_type = "None"
+        # Initially disable copy/save buttons
+        self.ui.copy_button.setEnabled(False)
+        self.ui.save_button.setEnabled(False)
 
     def open_image(self):
         file_path, _ = QFileDialog.getOpenFileName(
@@ -36,46 +36,47 @@ class ImageProcessorApp(QMainWindow):
         )
         if file_path:
             self.original_image = Image.open(file_path).convert("L")
-            self.resized_image = self.original_image.copy()
 
-            # Update slider range and value
-            self.ui.width_slider.setMaximum(self.original_image.width)
-            self.ui.width_slider.setValue(self.original_image.width)
+            # Set the width input to the original image width
+            self.ui.width_input.setText(str(self.original_image.width))
 
-            # Update the width value label
-            self.ui.width_value_label.setText(str(self.original_image.width))
+            # Display the original image as a preview
+            self.display_output(image_to_display=self.original_image)
 
-            self.dither_image()
-            self.display_output()
+    def render_image(self):
+        # Main func for image processing
+        if not self.original_image:
+            return
 
-    def resize_image(self):
-        if self.original_image:
-            new_width = self.ui.width_slider.value()
+        # 1. Get width from text field and resize the image
+        try:
+            new_width = int(self.ui.width_input.text())
+            if new_width <= 0:
+                return
+        except ValueError:
+            return
 
-            # Update the width value label as the slider moves
-            self.ui.width_value_label.setText(str(new_width))
+        aspect_ratio = self.original_image.height / self.original_image.width
+        new_height = int(new_width * aspect_ratio)
+        resized_image = self.original_image.resize(
+            (new_width, new_height), Image.Resampling.LANCZOS
+        )
 
-            aspect_ratio = self.original_image.height / self.original_image.width
-            new_height = int(new_width * aspect_ratio)
+        self.processed_image = resized_image.copy()
 
-            self.resized_image = self.original_image.resize(
-                (new_width, new_height), Image.Resampling.LANCZOS
+        # 2. Check the selected render type
+        render_type = self.ui.render_type_combo.currentText()
+
+        if render_type == "ASCII":
+            self.ascii_art_output = ascii_convert(
+                self.processed_image, output_width=new_width
             )
-            self.dither_image()
-            self.display_output()
+            self.display_output(ascii_text=self.ascii_art_output)
 
-    def dither_image(self):
-        if self.resized_image is None:
-            return # No image to process yet
-
-        self.dither_type = self.ui.dithering_combo.currentText()
-
-        if self.dither_type == "ASCII Art":
-            self.ascii_art_output = ascii_convert(self.resized_image, output_width=self.ui.width_slider.value())
-            self.processed_image = None # Clear processed image if in text mode
-        else:
-            self.processed_image = self.resized_image.copy()
-            match self.dither_type:
+        elif render_type == "Braille":
+            # Apply dithering for Braille mode
+            dither_type = self.ui.dithering_combo.currentText()
+            match dither_type:
                 case "Bayer level 0":
                     dither_image_bayer(self.processed_image, 0)
                 case "Bayer level 1":
@@ -85,17 +86,34 @@ class ImageProcessorApp(QMainWindow):
                 case "Bayer level 3":
                     dither_image_bayer(self.processed_image, 3, inverse=True)
                 case _:
+                    # "None" or other cases
                     pass
-        
-    def display_output(self):
-        if self.dither_type == "ASCII Art":
-            if self.ascii_art_output:
-                self.ui.text_output.setPlainText(self.ascii_art_output)
-                self.ui.display_stack.setCurrentIndex(1) # Show text output
-        elif self.resized_image: # Fallback to showing the resized image if no processing is done
-            
-            image_to_display = self.processed_image if self.processed_image else self.resized_image
 
+            # Display the final image
+            self.display_output(image_to_display=self.processed_image)
+
+    def copy_text(self):
+        """Copies the content of the text output to the clipboard."""
+        clipboard = QApplication.clipboard()
+        clipboard.setText(self.ui.text_output.toPlainText())
+
+    def save_text(self):
+        """Opens a dialog to save the text output to a file."""
+        file_path, _ = QFileDialog.getSaveFileName(
+            self, "Save ASCII Art", "", "Text Files (*.txt);;All Files (*)"
+        )
+        if file_path:
+            with open(file_path, "w") as f:
+                f.write(self.ui.text_output.toPlainText())
+
+    def display_output(self, image_to_display=None, ascii_text=None):
+        # Display settings both for original image and processed one
+        if ascii_text is not None:
+            self.ui.text_output.setPlainText(ascii_text)
+            self.ui.display_stack.setCurrentIndex(1)  # Show text output
+            self.ui.copy_button.setEnabled(True)
+            self.ui.save_button.setEnabled(True)
+        elif image_to_display is not None:
             image_data = image_to_display.tobytes("raw", "L")
             q_image = QImage(
                 image_data,
@@ -107,7 +125,9 @@ class ImageProcessorApp(QMainWindow):
             pixmap = QPixmap.fromImage(q_image)
 
             self.ui.image_label.setPixmap(pixmap)
-            self.ui.display_stack.setCurrentIndex(0) # Show image label
+            self.ui.display_stack.setCurrentIndex(0)  # Show image label
+            self.ui.copy_button.setEnabled(False)
+            self.ui.save_button.setEnabled(False)
 
 
 if __name__ == "__main__":

@@ -8,15 +8,16 @@ from PyQt5.QtWidgets import (
     QHBoxLayout,
     QWidget,
     QComboBox,
-    QStackedLayout,  # New import
-    QPlainTextEdit,  # New import
+    QStackedLayout,
+    QPlainTextEdit,
+    QCheckBox,
+    QLineEdit,
 )
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QPixmap, QFont  # Import QFont
 from dither import DITHERING_TYPES
 
 
-# Custom QLabel to automatically handle aspect ratio
 class AspectLabel(QLabel):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -32,20 +33,17 @@ class AspectLabel(QLabel):
         self._update_scaled_pixmap()
 
     def resizeEvent(self, event):
-        # When the label is resized, update the scaled pixmap
         self._update_scaled_pixmap()
 
     def _update_scaled_pixmap(self):
         if self._pixmap.isNull():
             return
 
-        # Scale the pixmap to fit the label's size, keeping aspect ratio
         scaled_pixmap = self._pixmap.scaled(
             self.size(),
             Qt.KeepAspectRatio,
             Qt.SmoothTransformation,  # For better image quality
         )
-        # Call the original QLabel's setPixmap to display the scaled version
         super().setPixmap(scaled_pixmap)
 
 
@@ -67,42 +65,49 @@ class Ui_MainWindow(object):
         self.open_button = QPushButton("Open Image")
         self.sidebar_layout.addWidget(self.open_button)
 
-        self.slider_label = QLabel("Image Width:")
-        self.sidebar_layout.addWidget(self.slider_label)
+        # --- Render Type Drop-down ---
+        self.render_type_label = QLabel("Render Type:")
+        self.sidebar_layout.addWidget(self.render_type_label)
+        self.render_type_combo = QComboBox()
+        self.render_type_combo.addItems(["Braille", "ASCII"])  # Updated items
+        self.sidebar_layout.addWidget(self.render_type_combo)
+
+        # --- Invert Colors Checkbox ---
+        self.invert_checkbox = QCheckBox("Invert Colors")
+        self.sidebar_layout.addWidget(self.invert_checkbox)
 
         # --- Dithering Drop-down ---
         self.dithering_label = QLabel("Dithering Type:")
         self.sidebar_layout.addWidget(self.dithering_label)
-
         self.dithering_combo = QComboBox()
-        # Add placeholder dithering options
         self.dithering_combo.addItems(DITHERING_TYPES)
         self.sidebar_layout.addWidget(self.dithering_combo)
 
-        # --- Slider and Value Label Layout ---
-        self.slider_layout = QHBoxLayout()
-        self.width_slider = QSlider(Qt.Horizontal)
-        self.width_slider.setMinimum(10)
-        self.width_slider.setMaximum(1000)
+        # --- Width Input ---
+        self.width_label = QLabel("Image Width:")
+        self.sidebar_layout.addWidget(self.width_label)
+        self.width_input = QLineEdit("400")  # Default value
+        self.sidebar_layout.addWidget(self.width_input)
 
-        self.width_value_label = QLabel("400")  # Initial value
-        self.width_value_label.setMinimumWidth(35)  # Ensure it has enough space
+        # --- Convert Button ---
+        self.render_button = QPushButton("Convert")  # Renamed
+        self.sidebar_layout.addWidget(self.render_button)
 
-        self.slider_layout.addWidget(self.width_slider)
-        self.slider_layout.addWidget(self.width_value_label)
+        # --- Spacer ---
+        self.sidebar_layout.addStretch(1)
 
-        # Add the slider group to the sidebar
-        self.sidebar_layout.addLayout(self.slider_layout)
-
-        # Set the initial slider value after creating the label
-        self.width_slider.setValue(400)
+        # --- Text Output Buttons ---
+        self.copy_button = QPushButton("Copy Text")
+        self.sidebar_layout.addWidget(self.copy_button)
+        self.save_button = QPushButton("Save to File")
+        self.sidebar_layout.addWidget(self.save_button)
 
         self.main_layout.addWidget(self.sidebar_widget)
 
         # --- Image/Text Display Area ---
         self.display_stack = QStackedLayout()  # New stacked layout
 
-        # Use our custom AspectLabel instead of a standard QLabel
+        # custom AspectLabel instead of a standard QLabel
         self.image_label = AspectLabel("Open an image to begin")
         self.image_label.setAlignment(Qt.AlignCenter)
         self.display_stack.addWidget(self.image_label)  # Add image label to stack
@@ -114,10 +119,8 @@ class Ui_MainWindow(object):
         font = QFont("Cascadia Code")  # Create a QFont object
         font.setStyleHint(QFont.Monospace)  # Set a style hint for fallback
         self.text_output.setFont(font)  # Use the correct setFont method
-        self.text_output.setStyleSheet(
-            "background-color: black; color: white;"
-        )  # Example styling
+        self.text_output.setStyleSheet("background-color: black; color: white;")
+        # Example styling
         self.display_stack.addWidget(self.text_output)  # Add text output to stack
 
         self.main_layout.addLayout(self.display_stack, 1)
-
