@@ -2,6 +2,7 @@ import numpy as np
 
 DITHERING_TYPES = [
     "None",
+    "ASCII Art",
     "Bayer level 0",
     "Bayer level 1",
     "Bayer level 2",
@@ -28,11 +29,6 @@ def bayer_normalized(level: int):
 
 def bayer_inverted(level: int):
     return 1 - bayer_normalized(level)
-
-
-print(bayer(0))
-print(bayer_normalized(0))
-print(bayer_inverted(0))
 
 
 def dither_image_bayer(img, level, inverse=False):

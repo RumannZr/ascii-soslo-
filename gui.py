@@ -8,9 +8,11 @@ from PyQt5.QtWidgets import (
     QHBoxLayout,
     QWidget,
     QComboBox,
+    QStackedLayout,  # New import
+    QPlainTextEdit,  # New import
 )
 from PyQt5.QtCore import Qt
-from PyQt5.QtGui import QPixmap
+from PyQt5.QtGui import QPixmap, QFont  # Import QFont
 from dither import DITHERING_TYPES
 
 
@@ -97,8 +99,25 @@ class Ui_MainWindow(object):
 
         self.main_layout.addWidget(self.sidebar_widget)
 
-        # --- Image Preview Area ---
+        # --- Image/Text Display Area ---
+        self.display_stack = QStackedLayout()  # New stacked layout
+
         # Use our custom AspectLabel instead of a standard QLabel
         self.image_label = AspectLabel("Open an image to begin")
         self.image_label.setAlignment(Qt.AlignCenter)
-        self.main_layout.addWidget(self.image_label, 1)
+        self.display_stack.addWidget(self.image_label)  # Add image label to stack
+
+        # New QPlainTextEdit for ASCII/Braille output
+        self.text_output = QPlainTextEdit()
+        self.text_output.setReadOnly(True)  # Make it read-only
+        # У меня были проблемы с отображением текста, так что делай че хочешь с этим  TODO:
+        font = QFont("Cascadia Code")  # Create a QFont object
+        font.setStyleHint(QFont.Monospace)  # Set a style hint for fallback
+        self.text_output.setFont(font)  # Use the correct setFont method
+        self.text_output.setStyleSheet(
+            "background-color: black; color: white;"
+        )  # Example styling
+        self.display_stack.addWidget(self.text_output)  # Add text output to stack
+
+        self.main_layout.addLayout(self.display_stack, 1)
+
