@@ -1,2 +1,6 @@
 venv/
 .env
+pyrightconfig.json
+__pycache__/
+.idea/
+Project_Analysis.md 
