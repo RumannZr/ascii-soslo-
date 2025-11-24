@@ -3,7 +3,6 @@
 from PyQt5.QtWidgets import (
     QLabel,
     QPushButton,
-    QSlider,
     QVBoxLayout,
     QHBoxLayout,
     QWidget,
@@ -12,6 +11,7 @@ from PyQt5.QtWidgets import (
     QPlainTextEdit,
     QCheckBox,
     QLineEdit,
+    QSlider,
 )
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QPixmap, QFont  # Import QFont
@@ -65,6 +65,13 @@ class Ui_MainWindow(object):
         self.open_button = QPushButton("Open Image")
         self.sidebar_layout.addWidget(self.open_button)
 
+        # --- Width Input ---
+        self.width_label = QLabel("Image Width:")
+        self.width_label.setWordWrap(True)
+        self.sidebar_layout.addWidget(self.width_label)
+        self.width_input = QLineEdit("400")  # Default value
+        self.sidebar_layout.addWidget(self.width_input)
+
         # --- Render Type Drop-down ---
         self.render_type_label = QLabel("Render Type:")
         self.sidebar_layout.addWidget(self.render_type_label)
@@ -74,10 +81,6 @@ class Ui_MainWindow(object):
         )  # Updated items
         self.sidebar_layout.addWidget(self.render_type_combo)
 
-        # --- Invert Colors Checkbox ---
-        self.invert_checkbox = QCheckBox("Invert Colors")
-        self.sidebar_layout.addWidget(self.invert_checkbox)
-
         # --- Dithering Drop-down ---
         self.dithering_label = QLabel("Dithering Type:")
         self.sidebar_layout.addWidget(self.dithering_label)
@@ -85,11 +88,36 @@ class Ui_MainWindow(object):
         self.dithering_combo.addItems(DITHERING_TYPES)
         self.sidebar_layout.addWidget(self.dithering_combo)
 
-        # --- Width Input ---
-        self.width_label = QLabel("Image Width:")
-        self.sidebar_layout.addWidget(self.width_label)
-        self.width_input = QLineEdit("400")  # Default value
-        self.sidebar_layout.addWidget(self.width_input)
+        # --- Invert Colors Checkbox ---
+        self.sidebar_layout.addSpacing(15)
+        self.invert_checkbox = QCheckBox("Invert")
+        self.sidebar_layout.addWidget(self.invert_checkbox)
+        self.invert_label = QLabel(
+            "Can give better result when used with Bayer. "
+            "With others - just results in color inversion."
+        )
+        self.invert_label.setWordWrap(True)
+        self.sidebar_layout.addWidget(self.invert_label)
+        self.sidebar_layout.addSpacing(15)
+
+        # --- Contrast Slider ---
+        self.contrast_label = QLabel("Contrast: 1.0")
+        self.sidebar_layout.addWidget(self.contrast_label)
+
+        self.contrast_slider = QSlider(Qt.Horizontal)
+        self.contrast_slider.setMinimum(0)
+        self.contrast_slider.setMaximum(300)  # Max 2.0x contrast
+        self.contrast_slider.setValue(100)  # Default 1.0x
+        self.contrast_slider.setTickPosition(QSlider.TicksBelow)
+        self.contrast_slider.setTickInterval(50)
+
+        # Connect slider movement to label update immediately
+        self.contrast_slider.valueChanged.connect(
+            lambda val: self.contrast_label.setText(f"Contrast: {val / 100:.1f}")
+        )
+
+        self.sidebar_layout.addWidget(self.contrast_slider)
+        self.sidebar_layout.addSpacing(15)
 
         # --- Convert Button ---
         self.render_button = QPushButton("Convert")  # Renamed
@@ -118,7 +146,7 @@ class Ui_MainWindow(object):
         self.text_output = QPlainTextEdit()
         self.text_output.setReadOnly(True)  # Make it read-only
         # У меня были проблемы с отображением текста, так что делай че хочешь с этим  TODO:
-        font = QFont("Cascadia Code")  # Create a QFont object
+        font = QFont("CaskaydiaCove Nerd Font")  # Create a QFont object
         font.setStyleHint(QFont.Monospace)  # Set a style hint for fallback
         self.text_output.setFont(font)  # Use the correct setFont method
         self.text_output.setStyleSheet("background-color: black; color: white;")

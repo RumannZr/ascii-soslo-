@@ -1,12 +1,13 @@
 import sys
+
 from PyQt5.QtWidgets import QApplication, QMainWindow, QFileDialog
 from PyQt5.QtGui import QPixmap, QImage
-from PIL import Image
+from PIL import Image, ImageEnhance
 
 from gui import Ui_MainWindow
 
 from dither import *
-from ascii_converter import ascii_convert  # Re-added import
+from img2text_converter import ascii_convert, braille_convert  # Re-added import
 
 
 class ImageProcessorApp(QMainWindow):
@@ -18,7 +19,7 @@ class ImageProcessorApp(QMainWindow):
 
         self.original_image = None
         self.processed_image = None
-        self.ascii_art_output = None
+        self.text_output = None
 
         # --- Connections ---
         self.ui.open_button.clicked.connect(self.open_image)
@@ -56,6 +57,10 @@ class ImageProcessorApp(QMainWindow):
         except ValueError:
             return
 
+        # Костыль, но не знаю как сделать лучше чтобы в текстовом поле задавалась именно ширина в символах
+        if self.ui.render_type_combo.currentText() == "Braille":
+            new_width = new_width * 2
+
         aspect_ratio = self.original_image.height / self.original_image.width
         new_height = int(new_width * aspect_ratio)
         resized_image = self.original_image.resize(
@@ -64,42 +69,34 @@ class ImageProcessorApp(QMainWindow):
 
         self.processed_image = resized_image.copy()
 
-        # 2. Check the selected render type
+        # 2. Add contrast to our image
+        contrast_val = self.ui.contrast_slider.value() / 100.0
+        enhancer = ImageEnhance.Contrast(self.processed_image)
+        self.processed_image = enhancer.enhance(contrast_val)
+
+        # 3. Check the selected render type
         render_type = self.ui.render_type_combo.currentText()
 
-        if render_type == "ASCII":
-            self.ascii_art_output = ascii_convert(
-                self.processed_image, output_width=new_width
-            )
-            self.display_output(ascii_text=self.ascii_art_output)
-
-        elif render_type == "Braille":
-            # Apply dithering for Braille mode
+        # 3.1. Apply dithering to b&w and braille
+        if render_type == "Black/White" or render_type == "Braille":
             dither_type = self.ui.dithering_combo.currentText()
-            match dither_type:
-                case "Bayer level 0":
-                    dither_image_bayer(self.processed_image, 0)
-                case "Bayer level 1":
-                    dither_image_bayer(self.processed_image, 1)
-                case "Bayer level 2":
-                    dither_image_bayer(self.processed_image, 2)
-                case "Bayer level 3":
-                    dither_image_bayer(self.processed_image, 3, inverse=True)
-                case _:
-                    # "None" or other cases
-                    pass
+            dither = DITHERING_FUNCTIONS[dither_type]
+            inverse = self.ui.invert_checkbox.isChecked()
+            self.processed_image = dither(self.processed_image, inverse)
 
-            # Display the final image
+        # 3.2. Display text or image
+        if render_type == "ASCII" or render_type == "Braille":
+            if render_type == "ASCII":
+                self.text_output = ascii_convert(
+                    self.processed_image, output_width=new_width
+                )
+            else:
+                self.text_output = braille_convert(
+                    self.processed_image, output_width=new_width
+                )
+            self.display_output(text_to_display=self.text_output)
+        else:
             self.display_output(image_to_display=self.processed_image)
-
-        elif render_type == "Grayscale":
-            # For Grayscale, just display the resized image
-            self.display_output(image_to_display=self.processed_image)
-
-        elif render_type == "Black/White":
-            # For Black/White, convert the image to 1-bit format
-            bw_image = self.processed_image.convert("1")
-            self.display_output(image_to_display=bw_image)
 
     def copy_text(self):
         """Copies the content of the text output to the clipboard."""
@@ -115,10 +112,10 @@ class ImageProcessorApp(QMainWindow):
             with open(file_path, "w") as f:
                 f.write(self.ui.text_output.toPlainText())
 
-    def display_output(self, image_to_display=None, ascii_text=None):
+    def display_output(self, image_to_display=None, text_to_display=None):
         # Display settings both for original image and processed one
-        if ascii_text is not None:
-            self.ui.text_output.setPlainText(ascii_text)
+        if text_to_display is not None:
+            self.ui.text_output.setPlainText(text_to_display)
             self.ui.display_stack.setCurrentIndex(1)  # Show text output
             self.ui.copy_button.setEnabled(True)
             self.ui.save_button.setEnabled(True)
